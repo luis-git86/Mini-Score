@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listado de cámaras</title>
+<style>
+  body{margin:0;background:#000;color:#fff;font-family:sans-serif;padding-bottom:40px;}
+  #list{padding:10px;}
+  .cam-btn{display:block;width:100%;font-size:15px;padding:14px;margin-bottom:8px;background:#2c2c34;color:#fff;border:none;text-align:left;}
+  #status{padding:12px;font-size:14px;background:#111;white-space:pre-wrap;min-height:60px;}
+  video{width:100%;background:#222;display:block;}
+</style>
+</head>
+<body>
+  <div id="list">Pidiendo permiso y listando cámaras...</div>
+  <div id="status"></div>
+  <video id="v" autoplay playsinline muted></video>
+
+<script>
+  const statusEl = document.getElementById('status');
+  const listEl = document.getElementById('list');
+  const video = document.getElementById('v');
+  function log(msg){ statusEl.textContent += msg + '\n'; console.log(msg); }
+
+  let currentStream = null;
+
+  async function init(){
+    // Pedimos acceso genérico primero para que el navegador nos deje ver las etiquetas reales de cada cámara
+    try{
+      const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+      tmp.getTracks().forEach(t=>t.stop());
+    }catch(e){
+      listEl.textContent = 'No se pudo obtener permiso inicial: ' + e.message;
+      return;
+    }
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    listEl.innerHTML = '';
+    cams.forEach((cam, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'cam-btn';
+      btn.textContent = (i+1) + '. ' + (cam.label || 'Cámara sin nombre') + '\ndeviceId: ' + cam.deviceId.slice(0,20) + '...';
+      btn.style.whiteSpace = 'pre-line';
+      btn.addEventListener('click', () => testDevice(cam.deviceId, cam.label));
+      listEl.appendChild(btn);
+    });
+    if(cams.length === 0){
+      listEl.textContent = 'No se encontraron cámaras.';
+    }
+  }
+
+  async function testDevice(deviceId, label){
+    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
+    statusEl.textContent = 'Probando: ' + label + ' ...\n';
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } }, audio: false });
+      currentStream = stream;
+      video.srcObject = stream;
+      video.addEventListener('loadedmetadata', () => {
+        log('Dimensiones reales: ' + video.videoWidth + 'x' + video.videoHeight);
+      }, { once: true });
+      const track = stream.getVideoTracks()[0];
+      log('Settings: ' + JSON.stringify(track.getSettings()));
+    }catch(err){
+      log('ERROR: ' + err.name + ' - ' + err.message);
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
