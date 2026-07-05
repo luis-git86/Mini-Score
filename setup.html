@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Clutch Stream — Configurar partido</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0f;
+    --panel:#141419;
+    --panel-border:#232329;
+    --purple:#9b3ff0;
+    --purple-soft:rgba(155,63,240,0.10);
+    --teal:#17b8a6;
+    --teal-soft:rgba(23,184,166,0.10);
+    --red:#e5342f;
+    --text:#f4f4f6;
+    --text-dim:#8b8b95;
+    --text-faint:#5c5c66;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden;height:100%;width:100%;}
+
+  /* --- Solo para este preview: fuerza vista horizontal aunque el telefono este en vertical.
+     En la app final (APK) esto no hace falta, Android bloquea la orientacion de forma nativa. --- */
+  #stage{
+    display:flex;flex-direction:column;
+    background:var(--bg);
+  }
+  @media (orientation:portrait){
+    #stage{
+      position:fixed;
+      top:0;left:0;
+      width:100vh;
+      height:100vw;
+      transform-origin:top left;
+      transform:rotate(90deg) translateY(-100%);
+    }
+  }
+  @media (orientation:landscape){
+    #stage{ width:100vw; height:100vh; }
+  }
+
+  .titlebar{padding:14px 20px 4px;display:flex;align-items:center;gap:10px;}
+  .back-btn{width:34px;height:34px;border-radius:9px;background:#1c1c22;border:1px solid var(--panel-border);color:var(--text);font-size:16px;display:none;align-items:center;justify-content:center;flex-shrink:0;}
+  .back-btn.show{display:flex;}
+  .titlebar h1{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;letter-spacing:0.5px;margin:0;}
+  .titlebar p{margin:2px 0 0;color:var(--text-faint);font-size:12px;}
+  .teams{display:flex;gap:12px;padding:10px 16px 0;flex:1;min-height:0;}
+  .team-panel{flex:1;background:var(--panel);border:1px solid var(--panel-border);border-radius:14px;padding:10px 14px;min-width:0;display:flex;flex-direction:column;}
+  .team-panel.local{background:linear-gradient(180deg, var(--purple-soft), var(--panel) 40%);}
+  .team-panel.visit{background:linear-gradient(180deg, var(--teal-soft), var(--panel) 40%);}
+  .team-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;}
+  .name-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .avatar{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;color:#fff;flex-shrink:0;transition:background-color .2s;}
+  .name-field{flex:1;min-width:0;}
+  .name-field-label{font-size:9px;letter-spacing:1px;color:var(--text-faint);text-transform:uppercase;margin-bottom:3px;font-weight:600;}
+  .name-input{width:100%;background:#1c1c22;border:1.5px solid #34343c;border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Barlow',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.5px;text-transform:uppercase;outline:none;}
+  .name-input::placeholder{color:var(--text-faint);text-transform:none;font-weight:500;}
+  .name-input:focus{border-color:#c7c7cf;}
+  .swatches{display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start;flex:1;}
+  .swatch{width:26px;height:26px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0;flex-shrink:0;}
+  .swatch.selected{border-color:#c7c7cf;}
+  .duration{margin:10px 16px 0;background:var(--panel);border:1px solid var(--panel-border);border-radius:14px;padding:10px 14px;}
+  .duration-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .duration-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;}
+  .duration-value{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;}
+  .duration-value span{font-size:13px;font-weight:600;color:var(--text-dim);margin-left:2px;}
+  .duration-row{display:flex;align-items:center;gap:10px;}
+  .stepper-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--panel-border);background:#1c1c22;color:var(--text);font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
+  .slider{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:linear-gradient(to right, var(--red) 0%, var(--red) var(--fill,50%), #2a2a31 var(--fill,50%), #2a2a31 100%);outline:none;}
+  .slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#0b0b0f;border:4px solid var(--red);cursor:pointer;}
+  .slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#0b0b0f;border:4px solid var(--red);cursor:pointer;}
+  .next-wrap{padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom));}
+  .next-btn{width:100%;background:var(--red);border:none;border-radius:14px;padding:13px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="titlebar">
+    <button class="back-btn" id="backBtn">&#8592;</button>
+    <div>
+      <h1>CONFIGURAR PARTIDO</h1>
+      <p id="today"></p>
+    </div>
+  </div>
+
+  <div class="teams">
+    <div class="team-panel local">
+      <div class="team-label">Equipo Local</div>
+      <div class="name-row">
+        <div class="avatar" id="avatarLocal" style="background:#9b3ff0">L</div>
+        <div class="name-field">
+          <div class="name-field-label">Nombre del equipo</div>
+          <input class="name-input" id="nameLocal" maxlength="12" value="LOCAL" placeholder="Nombre del equipo">
+        </div>
+      </div>
+      <div class="swatches" id="swatchesLocal"></div>
+    </div>
+
+    <div class="team-panel visit">
+      <div class="team-label">Equipo Visitante</div>
+      <div class="name-row">
+        <div class="avatar" id="avatarVisit" style="background:#17b8a6">V</div>
+        <div class="name-field">
+          <div class="name-field-label">Nombre del equipo</div>
+          <input class="name-input" id="nameVisit" maxlength="12" value="VISITANTE" placeholder="Nombre del equipo">
+        </div>
+      </div>
+      <div class="swatches" id="swatchesVisit"></div>
+    </div>
+  </div>
+
+  <div class="duration">
+    <div class="duration-top">
+      <div class="duration-label">Duración por periodo</div>
+      <div class="duration-value"><span id="durationVal">10</span><span>min</span></div>
+    </div>
+    <div class="duration-row">
+      <button class="stepper-btn" id="durMinus">−</button>
+      <input type="range" class="slider" id="durSlider" min="1" max="20" value="10">
+      <button class="stepper-btn" id="durPlus">+</button>
+    </div>
+  </div>
+
+  <div class="next-wrap">
+    <button class="next-btn" id="nextBtn">SIGUIENTE →</button>
+  </div>
+
+</div>
+
+<script>
+  const COLORS = ['#ffffff','#1a1a1a','#e91e8c','#17b8a6','#3b82f6','#f97316','#eab308','#22c55e','#a855f7','#ef4444'];
+
+  document.getElementById('today').textContent = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'2-digit'});
+
+  // Si ya existe una configuración/partido guardado, precargamos los campos con esos valores
+  const existingConfig = JSON.parse(localStorage.getItem('clutchstream_config') || 'null');
+  const existingGame = localStorage.getItem('clutchstream_gamestate');
+  const cfg = existingConfig || { local:{name:'LOCAL', color:'#a855f7'}, visit:{name:'VISITANTE', color:'#17b8a6'}, durationMin:10 };
+
+  // Mostrar botón "volver" solo si ya hay un partido en curso (venimos de la pantalla de marcador)
+  if(existingGame){
+    const backBtn = document.getElementById('backBtn');
+    backBtn.classList.add('show');
+    backBtn.addEventListener('click', () => { window.location.href = 'scoreboard.html'; });
+  }
+
+  let colorLocal = cfg.local.color;
+  let colorVisit = cfg.visit.color;
+
+  function buildSwatches(containerId, avatarId, colorValue, onPick){
+    const container = document.getElementById(containerId);
+    const avatar = document.getElementById(avatarId);
+    let selectedIndex = COLORS.findIndex(c => c.toLowerCase() === (colorValue||'').toLowerCase());
+    if(selectedIndex === -1) selectedIndex = 8;
+    COLORS.forEach((color, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'swatch' + (i === selectedIndex ? ' selected' : '');
+      btn.style.background = color;
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+        btn.classList.add('selected');
+        avatar.style.background = color;
+        avatar.style.color = (color === '#ffffff' || color === '#eab308') ? '#111' : '#fff';
+        onPick(color);
+      });
+      container.appendChild(btn);
+    });
+  }
+  buildSwatches('swatchesLocal', 'avatarLocal', cfg.local.color, (c)=>{ colorLocal = c; });
+  buildSwatches('swatchesVisit', 'avatarVisit', cfg.visit.color, (c)=>{ colorVisit = c; });
+
+  const nameLocal = document.getElementById('nameLocal');
+  const nameVisit = document.getElementById('nameVisit');
+  const avatarLocal = document.getElementById('avatarLocal');
+  const avatarVisit = document.getElementById('avatarVisit');
+
+  nameLocal.value = cfg.local.name;
+  nameVisit.value = cfg.visit.name;
+  avatarLocal.style.background = cfg.local.color;
+  avatarVisit.style.background = cfg.visit.color;
+  avatarLocal.textContent = (cfg.local.name.trim()[0] || 'L').toUpperCase();
+  avatarVisit.textContent = (cfg.visit.name.trim()[0] || 'V').toUpperCase();
+
+  nameLocal.addEventListener('input', () => { avatarLocal.textContent = (nameLocal.value.trim()[0] || 'L').toUpperCase(); });
+  nameVisit.addEventListener('input', () => { avatarVisit.textContent = (nameVisit.value.trim()[0] || 'V').toUpperCase(); });
+
+  const durSlider = document.getElementById('durSlider');
+  const durationVal = document.getElementById('durationVal');
+  durSlider.value = cfg.durationMin;
+  function updateSliderFill(){
+    const pct = ((durSlider.value - durSlider.min) / (durSlider.max - durSlider.min)) * 100;
+    durSlider.style.setProperty('--fill', pct + '%');
+    durationVal.textContent = durSlider.value;
+  }
+  durSlider.addEventListener('input', updateSliderFill);
+  document.getElementById('durMinus').addEventListener('click', () => { durSlider.value = Math.max(+durSlider.min, +durSlider.value - 1); updateSliderFill(); });
+  document.getElementById('durPlus').addEventListener('click', () => { durSlider.value = Math.min(+durSlider.max, +durSlider.value + 1); updateSliderFill(); });
+  updateSliderFill();
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    const config = {
+      local: { name: nameLocal.value.trim() || 'LOCAL', color: colorLocal },
+      visit: { name: nameVisit.value.trim() || 'VISITANTE', color: colorVisit },
+      durationMin: +durSlider.value
+    };
+    localStorage.setItem('clutchstream_config', JSON.stringify(config));
+    // Ajustar el config NO borra el marcador/partido en curso (fouls, puntos, etc. viven aparte en clutchstream_gamestate)
+    window.location.href = 'scoreboard.html';
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Clutch Stream — Marcador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0f;
+    --panel-border:#232329;
+    --purple:#9b3ff0;
+    --teal:#17b8a6;
+    --red:#e5342f;
+    --text:#f4f4f6;
+    --text-dim:#8b8b95;
+    --text-faint:#5c5c66;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{margin:0;padding:0;background:#000;color:var(--text);font-family:'Barlow',sans-serif;overflow:hidden;height:100%;width:100%;}
+
+  #stage{display:flex;flex-direction:row;background:var(--bg);}
+  @media (orientation:portrait){
+    #stage{position:fixed;top:0;left:0;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%);}
+  }
+  @media (orientation:landscape){
+    #stage{width:100vw;height:100vh;}
+  }
+
+  .team-panel{width:15%;min-width:118px;display:flex;flex-direction:column;padding:8px 6px;gap:6px;}
+
+  .score-display{text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:38px;padding:4px 0;}
+  .score-steppers{display:flex;gap:6px;}
+  .score-steppers button{flex:1;background:rgba(255,255,255,0.12);border:none;border-radius:10px;color:#fff;font-size:20px;font-weight:700;padding:8px 0;}
+
+  .points-btn{flex:2.3;border:2px solid rgba(255,255,255,0.35);border-radius:14px;background:rgba(255,255,255,0.06);color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;display:flex;align-items:center;justify-content:center;position:relative;width:100%;}
+  .points-btn:active{background:rgba(255,255,255,0.22);}
+
+  .mini-module{flex:1;background:rgba(0,0,0,0.28);border-radius:10px;padding:5px 6px;display:flex;flex-direction:column;gap:4px;min-height:0;}
+  .mini-module .mm-label{font-size:9px;letter-spacing:0.5px;color:rgba(255,255,255,0.75);display:flex;align-items:center;gap:4px;font-weight:700;text-transform:uppercase;}
+  .dots{display:flex;gap:4px;flex-wrap:wrap;}
+  .dot{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.4);}
+  .dot.filled{background:#fff;}
+
+  .center{flex:1;display:flex;flex-direction:column;min-width:0;}
+
+  .topbar{height:64px;flex-shrink:0;display:flex;align-items:stretch;background:#111;}
+  .tb-left{display:flex;align-items:center;gap:10px;padding:0 12px;flex:1;min-width:0;}
+  .icon-btn{width:34px;height:34px;border-radius:9px;background:#1c1c22;border:1px solid var(--panel-border);display:flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;}
+  .icon-btn-lg{width:48px;height:48px;font-size:24px;color:#fff;background:#26262e;border-color:#3a3a44;}
+  .tb-title{min-width:0;}
+  .tb-title .vs{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tb-title .date{font-size:10px;color:var(--text-faint);}
+  .tb-clock{display:flex;align-items:center;justify-content:center;gap:10px;padding:0 14px;}
+  .game-clock{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:52px;line-height:1;letter-spacing:1px;}
+  .tb-shot{background:var(--red);display:flex;align-items:center;gap:10px;padding:0 14px;justify-content:center;min-width:150px;}
+  .tb-shot-divider{width:1.5px;height:60%;background:rgba(255,255,255,0.4);}
+  .tb-shot .shot-num{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:52px;line-height:1;}
+  .tb-shot .shot-num small{font-size:16px;font-weight:600;}
+
+  .camera-wrap{flex:1;position:relative;background:#000;min-height:0;}
+  #camPreview{width:100%;height:100%;object-fit:cover;display:block;}
+  .cam-status{position:absolute;top:10px;left:14px;font-size:12px;color:rgba(255,255,255,0.6);font-family:'Barlow Condensed',sans-serif;}
+  .cam-badge{position:absolute;top:10px;right:14px;font-size:11px;color:rgba(255,255,255,0.55);}
+
+  .rec-btn{position:absolute;bottom:12px;left:14px;background:var(--red);border:none;border-radius:14px;padding:10px 18px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;letter-spacing:1px;display:flex;align-items:center;gap:8px;}
+  .rec-dot{width:11px;height:11px;border-radius:50%;background:#fff;}
+  .rec-btn.recording{background:#7a1613;}
+  .rec-btn.recording .rec-dot{background:#fff;border-radius:3px;}
+
+  .shot-reset-fab{position:absolute;bottom:74px;right:16px;width:52px;height:52px;border-radius:50%;background:#fff;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;line-height:1;transition:all .25s;border:none;}
+  .shot-reset-fab.pulse{background:var(--red);color:#fff;transform:scale(1.3);}
+  .play-fab{position:absolute;bottom:12px;right:16px;width:52px;height:52px;border-radius:50%;background:#fff;border:none;display:flex;align-items:center;justify-content:center;color:#111;font-size:28px;transition:all .25s;}
+  .play-fab.pulse{background:var(--red);color:#fff;transform:scale(1.3);}
+
+  .bottom-overlay{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(10,10,12,0.72);backdrop-filter:blur(3px);border-radius:10px;padding:6px 16px 8px;font-family:'Barlow Condensed',sans-serif;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .bo-quarter-wrap{position:relative;display:flex;justify-content:center;}
+  .bo-quarter{font-size:12px;font-weight:700;color:var(--text-dim);background:transparent;border:none;padding:2px 10px;display:flex;align-items:center;gap:4px;cursor:pointer;}
+  .bo-quarter-menu{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1c1c22;border:1px solid var(--panel-border);border-radius:8px;overflow:hidden;z-index:5;min-width:70px;margin-bottom:4px;}
+  .bo-quarter-menu.open{display:block;}
+  .bo-quarter-menu button{display:block;width:100%;background:none;border:none;color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;padding:7px 0;text-align:center;}
+  .bo-quarter-menu button:active{background:rgba(255,255,255,0.12);}
+  .bo-row{display:flex;align-items:center;gap:16px;}
+  .bo-team{font-size:12px;font-weight:700;letter-spacing:0.5px;width:64px;text-align:center;position:relative;}
+  .bo-score{font-size:20px;font-weight:800;padding:1px 8px;border-radius:5px;display:inline-block;min-width:26px;}
+  .bo-mid{text-align:center;width:56px;}
+  .bo-shot{font-size:15px;font-weight:800;color:var(--red);}
+  .bo-time{font-size:13px;font-weight:700;}
+
+  .hit-fx{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2.6rem;text-shadow:0 2px 12px rgba(0,0,0,0.6);opacity:0;pointer-events:none;white-space:nowrap;}
+  .hit-fx.play{animation:floatUp 900ms ease-out forwards;}
+  @keyframes floatUp{0%{opacity:0;transform:translate(-50%,0) scale(0.6);}20%{opacity:1;transform:translate(-50%,-6px) scale(1);}100%{opacity:0;transform:translate(-50%,-56px) scale(1.15);}}
+
+  @keyframes pulseScale{0%{transform:scale(1);}50%{transform:scale(1.3);}100%{transform:scale(1);}}
+  .pulse-anim{animation:pulseScale 250ms ease;display:inline-block;}
+
+  .modal-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:#18181e;border:1px solid var(--panel-border);border-radius:16px;padding:20px;width:320px;max-width:88%;text-align:center;}
+  .modal-box h3{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:19px;margin:0 0 8px;}
+  .modal-box p{font-size:13px;color:var(--text-dim);margin:0 0 18px;line-height:1.4;}
+  .modal-btn{width:100%;border:none;border-radius:12px;padding:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;margin-bottom:8px;cursor:pointer;}
+  .modal-btn.primary{background:#2c2c34;color:#fff;}
+  .modal-btn.accent{background:var(--red);color:#fff;}
+  .modal-btn.ghost{background:transparent;color:var(--text-dim);margin-bottom:0;}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="team-panel local" id="panelLocal">
+    <div class="score-display" id="scoreLocalDisp">0</div>
+    <div class="score-steppers">
+      <button id="localMinus">−</button>
+      <button id="localPlus1silent">+</button>
+    </div>
+    <button class="points-btn" data-team="local" data-pts="1">+1</button>
+    <button class="points-btn" data-team="local" data-pts="2">+2</button>
+    <button class="points-btn" data-team="local" data-pts="3">+3</button>
+    <div class="mini-module">
+      <div class="mm-label">Faltas</div>
+      <div class="dots" id="foulsLocal"></div>
+    </div>
+    <div class="mini-module">
+      <div class="mm-label">T. Fuera</div>
+      <div class="dots" id="toLocal"></div>
+    </div>
+  </div>
+
+  <div class="center">
+    <div class="topbar">
+      <div class="tb-left">
+        <button class="icon-btn icon-btn-lg" id="settingsBtn">&#9881;</button>
+        <div class="tb-title">
+          <div class="vs" id="matchTitle">LOCAL VS VISITANTE</div>
+          <div class="date" id="matchDate"></div>
+        </div>
+      </div>
+      <div class="tb-clock">
+        <button class="icon-btn icon-btn-lg" id="resetClockBtn">&#8635;</button>
+        <button class="icon-btn icon-btn-lg" id="gamePlayBtn">&#9654;</button>
+        <div class="game-clock" id="gameClock">10:00</div>
+      </div>
+      <div class="tb-shot">
+        <button class="icon-btn" id="shotPlayBtn" style="background:transparent;border:none;color:#fff;font-size:26px;width:38px;height:38px;">&#9654;</button>
+        <div class="tb-shot-divider"></div>
+        <div class="shot-num" id="shotClock">24<small>.00</small></div>
+      </div>
+    </div>
+
+    <div class="camera-wrap">
+      <video id="camPreview" autoplay playsinline muted></video>
+      <div class="cam-status" id="camStatus">Iniciando cámara…</div>
+      <div class="cam-badge">1080p · 30fps</div>
+
+      <button class="rec-btn" id="recBtn"><span class="rec-dot"></span><span id="recLabel">REC</span></button>
+      <button class="shot-reset-fab" id="shotResetFab">24&#8635;</button>
+      <button class="play-fab" id="clockPlayFab">&#9201;</button>
+
+      <div class="bottom-overlay">
+        <div class="bo-quarter-wrap">
+          <button class="bo-quarter" id="ovQuarterBtn">1ER ▾</button>
+          <div class="bo-quarter-menu" id="ovQuarterMenu">
+            <button data-q="1">1ER</button>
+            <button data-q="2">2DO</button>
+            <button data-q="3">3ER</button>
+            <button data-q="4">4TO</button>
+          </div>
+        </div>
+        <div class="bo-row">
+          <div class="bo-team">
+            <div class="hit-fx" id="hitFxLocal"></div>
+            <div style="color:var(--text-dim)" id="ovLocalName">LOCAL</div>
+            <div class="bo-score local" id="ovLocalScore">0</div>
+          </div>
+          <div class="bo-mid">
+            <div class="bo-shot" id="ovShot">24</div>
+            <div class="bo-time" id="ovTime">10:00</div>
+          </div>
+          <div class="bo-team">
+            <div class="hit-fx" id="hitFxVisit"></div>
+            <div style="color:var(--text-dim)" id="ovVisitName">VISITANTE</div>
+            <div class="bo-score visit" id="ovVisitScore">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="team-panel visit" id="panelVisit">
+    <div class="score-display" id="scoreVisitDisp">0</div>
+    <div class="score-steppers">
+      <button id="visitMinus">−</button>
+      <button id="visitPlus1silent">+</button>
+    </div>
+    <button class="points-btn" data-team="visit" data-pts="1">+1</button>
+    <button class="points-btn" data-team="visit" data-pts="2">+2</button>
+    <button class="points-btn" data-team="visit" data-pts="3">+3</button>
+    <div class="mini-module">
+      <div class="mm-label">Faltas</div>
+      <div class="dots" id="foulsVisit"></div>
+    </div>
+    <div class="mini-module">
+      <div class="mm-label">T. Fuera</div>
+      <div class="dots" id="toVisit"></div>
+    </div>
+  </div>
+
+  <!-- Paso 1: elegir qué tipo de reinicio -->
+  <div class="modal-overlay" id="modalResetChoice">
+    <div class="modal-box">
+      <h3>Reiniciar cronómetro</h3>
+      <p>¿Qué quieres hacer?</p>
+      <button class="modal-btn primary" id="btnResetPeriod">Reiniciar periodo</button>
+      <button class="modal-btn accent" id="btnGoNewGame">Nueva grabación</button>
+      <button class="modal-btn ghost" id="btnCancelReset1">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Paso 2: confirmación de nuevo partido (irreversible) -->
+  <div class="modal-overlay" id="modalNewGameConfirm">
+    <div class="modal-box">
+      <h3>¿Iniciar nuevo partido?</h3>
+      <p>Esta acción no se puede revertir. Se restablecerá el marcador, faltas, tiempos fuera, cronómetros y periodo, como si empezaras un partido nuevo.</p>
+      <button class="modal-btn accent" id="btnConfirmNewGame">Sí, iniciar nuevo partido</button>
+      <button class="modal-btn ghost" id="btnCancelReset2">Cancelar</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ---------- Config from setup screen ----------
+  const rawConfig = localStorage.getItem('clutchstream_config');
+  const config = rawConfig ? JSON.parse(rawConfig) : {
+    local:{name:'LOCAL', color:'#9b3ff0'}, visit:{name:'VISITANTE', color:'#17b8a6'}, durationMin:10
+  };
+
+  document.getElementById('matchTitle').textContent = `${config.local.name} VS ${config.visit.name}`;
+  document.getElementById('matchDate').textContent = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  document.getElementById('ovLocalName').textContent = config.local.name;
+  document.getElementById('ovVisitName').textContent = config.visit.name;
+
+  // ---------- Aplicar colores elegidos en Configurar Partido a los paneles y al overlay ----------
+  function shadeColor(hex, percent){
+    hex = (hex||'#888888').replace('#','');
+    if(hex.length===3) hex = hex.split('').map(c=>c+c).join('');
+    const f = parseInt(hex,16);
+    const t = percent<0 ? 0 : 255;
+    const p = Math.abs(percent);
+    const R = f>>16, G = (f>>8)&0x00FF, B = f&0x0000FF;
+    return "#"+(0x1000000+(Math.round((t-R)*p)+R)*0x10000+(Math.round((t-G)*p)+G)*0x100+(Math.round((t-B)*p)+B)).toString(16).slice(1);
+  }
+  document.getElementById('panelLocal').style.background = `linear-gradient(180deg, ${shadeColor(config.local.color,-0.15)}, ${shadeColor(config.local.color,-0.78)})`;
+  document.getElementById('panelVisit').style.background = `linear-gradient(180deg, ${shadeColor(config.visit.color,-0.15)}, ${shadeColor(config.visit.color,-0.78)})`;
+  document.getElementById('ovLocalScore').style.background = config.local.color;
+  document.getElementById('ovVisitScore').style.background = config.visit.color;
+
+  // ---------- State (se recupera si ya había un partido en curso, para que ir a Ajustes no resetee nada) ----------
+  const savedState = JSON.parse(localStorage.getItem('clutchstream_gamestate') || 'null');
+  const state = savedState || {
+    scoreLocal:0, scoreVisit:0,
+    foulsLocal:0, foulsVisit:0,
+    toLocal:0, toVisit:0,
+    quarter:1,
+    gameSeconds: config.durationMin*60,
+    gameRunning:false,
+    shotSeconds:24,
+    shotRunning:false,
+  };
+  // Por seguridad, al recargar la pantalla nunca arranca con los relojes corriendo solos
+  state.gameRunning = false;
+  state.shotRunning = false;
+
+  function saveGameState(){
+    localStorage.setItem('clutchstream_gamestate', JSON.stringify(state));
+  }
+
+  const QUARTER_LABELS = ['1ER','2DO','3ER','4TO'];
+
+  function renderDots(containerId, count, max){
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    for(let i=0;i<max;i++){
+      const d = document.createElement('div');
+      d.className = 'dot' + (i < count ? ' filled' : '');
+      el.appendChild(d);
+    }
+  }
+
+  function fmtClock(totalSeconds){
+    const m = Math.floor(totalSeconds/60);
+    const s = Math.floor(totalSeconds%60);
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function render(){
+    document.getElementById('scoreLocalDisp').textContent = state.scoreLocal;
+    document.getElementById('scoreVisitDisp').textContent = state.scoreVisit;
+    document.getElementById('ovLocalScore').textContent = state.scoreLocal;
+    document.getElementById('ovVisitScore').textContent = state.scoreVisit;
+    renderDots('foulsLocal', state.foulsLocal, 5);
+    renderDots('foulsVisit', state.foulsVisit, 5);
+    renderDots('toLocal', state.toLocal, 5);
+    renderDots('toVisit', state.toVisit, 5);
+    document.getElementById('gameClock').textContent = fmtClock(state.gameSeconds);
+    document.getElementById('ovTime').textContent = fmtClock(state.gameSeconds);
+    document.getElementById('gamePlayBtn').innerHTML = state.gameRunning ? '&#10074;&#10074;' : '&#9654;';
+    document.getElementById('ovQuarterBtn').textContent = (QUARTER_LABELS[state.quarter-1] || `${state.quarter}º`) + ' ▾';
+    const shotClamped = Math.max(0, state.shotSeconds);
+    const shotWhole = Math.floor(shotClamped);
+    const shotTenths = Math.floor((shotClamped - shotWhole) * 10);
+    document.getElementById('shotClock').innerHTML = `${shotWhole}<small>.${shotTenths}0</small>`;
+    document.getElementById('ovShot').textContent = Math.ceil(shotClamped);
+    document.getElementById('shotPlayBtn').innerHTML = state.shotRunning ? '&#8635;' : '&#9654;';
+  }
+
+  function pulse(el){
+    if(!el) return;
+    el.classList.remove('pulse-anim');
+    void el.offsetWidth;
+    el.classList.add('pulse-anim');
+  }
+
+  function hitColorFor(color){
+    const c = (color||'').toLowerCase();
+    if(c === '#ffffff' || c === '#fff' || c === '#1a1a1a' || c === '#000000' || c === '#000'){
+      return '#ffffff';
+    }
+    return color;
+  }
+
+  function showHit(team, text){
+    const fx = document.getElementById(team==='local' ? 'hitFxLocal' : 'hitFxVisit');
+    fx.textContent = text;
+    fx.style.color = hitColorFor(team==='local' ? config.local.color : config.visit.color);
+    fx.classList.remove('play'); void fx.offsetWidth; fx.classList.add('play');
+  }
+
+  // ---------- Points ----------
+  document.querySelectorAll('.points-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const team = btn.dataset.team;
+      const pts = +btn.dataset.pts;
+      if(team==='local') state.scoreLocal += pts; else state.scoreVisit += pts;
+      // Anotación de 2 o 3 puntos: el reloj de posesión se reinicia a 24 y queda PAUSADO, esperando el próximo play
+      if(pts===2 || pts===3){
+        state.shotSeconds = 24;
+        state.shotRunning = false;
+      }
+      showHit(team, '+'+pts);
+      logEvent('score', {team, pts});
+      pulse(btn);
+      pulse(document.getElementById(team==='local' ? 'scoreLocalDisp' : 'scoreVisitDisp'));
+      pulse(document.getElementById(team==='local' ? 'ovLocalScore' : 'ovVisitScore'));
+      saveGameState();
+      render();
+    });
+  });
+  document.getElementById('localMinus').addEventListener('click', ()=>{ state.scoreLocal = Math.max(0,state.scoreLocal-1); pulse(document.getElementById('scoreLocalDisp')); pulse(document.getElementById('ovLocalScore')); saveGameState(); render(); });
+  document.getElementById('visitMinus').addEventListener('click', ()=>{ state.scoreVisit = Math.max(0,state.scoreVisit-1); pulse(document.getElementById('scoreVisitDisp')); pulse(document.getElementById('ovVisitScore')); saveGameState(); render(); });
+  document.getElementById('localPlus1silent').addEventListener('click', ()=>{ state.scoreLocal += 1; pulse(document.getElementById('scoreLocalDisp')); pulse(document.getElementById('ovLocalScore')); saveGameState(); render(); });
+  document.getElementById('visitPlus1silent').addEventListener('click', ()=>{ state.scoreVisit += 1; pulse(document.getElementById('scoreVisitDisp')); pulse(document.getElementById('ovVisitScore')); saveGameState(); render(); });
+
+  // Fouls / timeouts: tap the dots row to cycle
+  document.getElementById('foulsLocal').addEventListener('click', ()=>{ state.foulsLocal = (state.foulsLocal+1)%6; saveGameState(); render(); });
+  document.getElementById('foulsVisit').addEventListener('click', ()=>{ state.foulsVisit = (state.foulsVisit+1)%6; saveGameState(); render(); });
+  document.getElementById('toLocal').addEventListener('click', ()=>{ state.toLocal = (state.toLocal+1)%6; saveGameState(); render(); });
+  document.getElementById('toVisit').addEventListener('click', ()=>{ state.toVisit = (state.toVisit+1)%6; saveGameState(); render(); });
+
+  // ---------- Selector de periodo (dropdown) ----------
+  const quarterBtn = document.getElementById('ovQuarterBtn');
+  const quarterMenu = document.getElementById('ovQuarterMenu');
+  quarterBtn.addEventListener('click', (e)=>{ e.stopPropagation(); quarterMenu.classList.toggle('open'); });
+  quarterMenu.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      state.quarter = +b.dataset.q;
+      logEvent('quarter');
+      quarterMenu.classList.remove('open');
+      saveGameState();
+      render();
+    });
+  });
+  document.addEventListener('click', ()=> quarterMenu.classList.remove('open'));
+
+  // ---------- Clocks (rAF driven) ----------
+  let lastTs = null;
+  function tick(ts){
+    if(lastTs===null) lastTs = ts;
+    const dt = (ts-lastTs)/1000;
+    lastTs = ts;
+
+    if(state.gameRunning && state.gameSeconds>0){
+      state.gameSeconds = Math.max(0, state.gameSeconds - dt);
+    }
+    if(state.shotRunning && state.shotSeconds>0){
+      state.shotSeconds = Math.max(0, state.shotSeconds - dt);
+      if(state.shotSeconds===0) state.shotRunning=false;
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function toggleGameClock(){
+    state.gameRunning = !state.gameRunning;
+    state.shotRunning = state.gameRunning; // el reloj de posesión queda ligado al del periodo
+    logEvent('clockToggle');
+    saveGameState();
+  }
+  document.getElementById('gameClock').addEventListener('click', toggleGameClock);
+  document.getElementById('clockPlayFab').addEventListener('click', ()=>{
+    toggleGameClock();
+    const btn = document.getElementById('clockPlayFab');
+    btn.classList.add('pulse');
+    setTimeout(()=>btn.classList.remove('pulse'), 250);
+  });
+  document.getElementById('gamePlayBtn').addEventListener('click', toggleGameClock);
+
+  // Botón rojo junto al 24: toggle real de play/reset según su estado actual.
+  // Pausado -> arranca la cuenta (play real). Corriendo -> resetea a 24 y se pausa (nunca arranca solo).
+  document.getElementById('shotPlayBtn').addEventListener('click', ()=>{
+    if(state.shotRunning){
+      state.shotSeconds = 24;
+      state.shotRunning = false;
+    } else {
+      state.shotRunning = true;
+    }
+    logEvent('shotToggle');
+    saveGameState();
+    render();
+  });
+  document.getElementById('resetClockBtn').addEventListener('click', ()=>{
+    document.getElementById('modalResetChoice').classList.add('open');
+  });
+
+  // --- Modal paso 1 ---
+  document.getElementById('btnCancelReset1').addEventListener('click', ()=>{
+    document.getElementById('modalResetChoice').classList.remove('open');
+  });
+  document.getElementById('btnResetPeriod').addEventListener('click', ()=>{
+    state.gameSeconds = config.durationMin*60;
+    state.gameRunning=false;
+    state.shotRunning=false;
+    saveGameState();
+    render();
+    document.getElementById('modalResetChoice').classList.remove('open');
+  });
+  document.getElementById('btnGoNewGame').addEventListener('click', ()=>{
+    document.getElementById('modalResetChoice').classList.remove('open');
+    document.getElementById('modalNewGameConfirm').classList.add('open');
+  });
+
+  // --- Modal paso 2 (irreversible) ---
+  document.getElementById('btnCancelReset2').addEventListener('click', ()=>{
+    document.getElementById('modalNewGameConfirm').classList.remove('open');
+  });
+  document.getElementById('btnConfirmNewGame').addEventListener('click', ()=>{
+    Object.assign(state, {
+      scoreLocal:0, scoreVisit:0,
+      foulsLocal:0, foulsVisit:0,
+      toLocal:0, toVisit:0,
+      quarter:1,
+      gameSeconds: config.durationMin*60,
+      gameRunning:false,
+      shotSeconds:24,
+      shotRunning:false,
+    });
+    saveGameState();
+    render();
+    document.getElementById('modalNewGameConfirm').classList.remove('open');
+    // si había una grabación activa, la detenemos visualmente al empezar de cero
+    recording = false;
+    document.getElementById('recBtn').classList.remove('recording');
+    document.getElementById('recLabel').textContent = 'REC';
+  });
+
+  // Tocar el número del shot clock: reinicia a 24 y se QUEDA PAUSADO (control manual, no afecta el reloj del periodo)
+  document.getElementById('shotClock').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    state.shotSeconds = 24;
+    state.shotRunning = false;
+    logEvent('shotManualReset');
+    saveGameState();
+    render();
+  });
+
+  // Botón blanco redondo: reinicia el shot clock a 24 y arranca la cuenta regresiva automáticamente
+  const shotResetFab = document.getElementById('shotResetFab');
+  shotResetFab.addEventListener('click', ()=>{
+    state.shotSeconds = 24;
+    state.shotRunning = true;
+    shotResetFab.classList.add('pulse');
+    setTimeout(()=>shotResetFab.classList.remove('pulse'), 250);
+    logEvent('shotAutoReset');
+    saveGameState();
+    render();
+  });
+
+  // ---------- Camera live preview ----------
+  const video = document.getElementById('camPreview');
+  const camStatus = document.getElementById('camStatus');
+  let camStream = null;
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment', width:{ideal:1920}, height:{ideal:1080} }, audio:true })
+      .then(stream=>{
+        video.srcObject = stream;
+        camStatus.textContent = '';
+        camStream = stream;
+      })
+      .catch(err=>{
+        camStatus.textContent = 'Sin acceso a cámara (' + err.message + ')';
+      });
+  } else {
+    camStatus.textContent = 'Este navegador no expone cámara aquí — probar en el celular.';
+  }
+
+  // ---------- Grabación real (cámara + audio directos, SIN canvas, para evitar el bug de Android) ----------
+  let recording = false;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordingStartTs = 0;
+
+  // Bitácora de eventos del marcador durante la grabación (para "pegar" el overlay en el siguiente paso)
+  window.__recordingEvents = [];
+  function logEvent(type, extra){
+    if(!recording) return;
+    window.__recordingEvents.push({
+      t: (performance.now() - recordingStartTs) / 1000, // segundos desde que inició la grabación
+      type,
+      scoreLocal: state.scoreLocal, scoreVisit: state.scoreVisit,
+      quarter: state.quarter,
+      gameSeconds: state.gameSeconds, gameRunning: state.gameRunning,
+      shotSeconds: state.shotSeconds, shotRunning: state.shotRunning,
+      ...extra
+    });
+  }
+
+  function pickMimeType(){
+    const candidates = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4'
+    ];
+    for(const c of candidates){
+      if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) return c;
+    }
+    return '';
+  }
+
+  function startRecording(){
+    if(!camStream){
+      alert('La cámara todavía no está lista. Espera un segundo e intenta de nuevo.');
+      return;
+    }
+    recordedChunks = [];
+    window.__recordingEvents = [];
+    const mimeType = pickMimeType();
+    try{
+      mediaRecorder = mimeType ? new MediaRecorder(camStream, { mimeType, videoBitsPerSecond: 5_000_000 }) : new MediaRecorder(camStream);
+    }catch(err){
+      alert('No se pudo iniciar la grabación: ' + err.message);
+      return;
+    }
+    mediaRecorder.ondataavailable = (e) => { if(e.data && e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = handleRecordingStop;
+    mediaRecorder.start(1000); // vuelca datos cada segundo, evita perder todo si algo falla
+    recordingStartTs = performance.now();
+    recording = true;
+    logEvent('start');
+    updateRecUI();
+  }
+
+  function stopRecording(){
+    if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+      logEvent('stop');
+      mediaRecorder.stop();
+    }
+    recording = false;
+    updateRecUI();
+  }
+
+  function updateRecUI(){
+    const btn = document.getElementById('recBtn');
+    btn.classList.toggle('recording', recording);
+    document.getElementById('recLabel').textContent = recording ? 'STOP' : 'REC';
+  }
+
+  async function handleRecordingStop(){
+    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
+    const fileName = `clutchstream_${Date.now()}.webm`;
+    const file = new File([blob], fileName, { type: blob.type });
+
+    // En Android/Chrome, compartir el archivo suele ofrecer "Guardar en Archivos/Galería" de forma nativa
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      try{
+        await navigator.share({ files:[file], title:'Clutch Stream', text:'Video del partido' });
+        return;
+      }catch(err){
+        // si cancela el share, caemos a la descarga normal
+      }
+    }
+    // Alternativa: descarga directa (queda en la carpeta Descargas del teléfono)
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }
+
+  document.getElementById('recBtn').addEventListener('click', ()=>{
+    if(!recording) startRecording(); else stopRecording();
+  });
+
+  render();
+
+  // ---------- Botón de ajustes: ir a Configurar Partido sin perder el estado del marcador ----------
+  document.getElementById('settingsBtn').addEventListener('click', ()=>{
+    if(recording){
+      alert('Tienes una grabación en curso. Detén la grabación (STOP) antes de ir a Ajustes, o el video se perderá.');
+      return;
+    }
+    saveGameState();
+    window.location.href = 'setup.html?from=scoreboard';
+  });
+</script>
+</body>
+</html>
