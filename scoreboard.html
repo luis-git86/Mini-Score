@@ -152,6 +152,7 @@
     <div class="camera-wrap">
       <video id="camPreview" autoplay playsinline muted></video>
       <div class="cam-status" id="camStatus">Iniciando cámara…</div>
+      <button id="retryCamBtn" style="display:none;position:absolute;top:56px;left:14px;background:#fff;color:#111;border:none;border-radius:8px;padding:8px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;z-index:4;">Reintentar cámara</button>
       <div class="cam-badge">1080p · 30fps</div>
 
       <button class="rec-btn" id="recBtn"><span class="rec-dot"></span><span id="recLabel">REC</span></button>
@@ -509,11 +510,22 @@
     console.log('[cam-diag]', msg);
   }
 
+  function stopCamera(){
+    if(camStream){
+      camStream.getTracks().forEach(t=>t.stop());
+      camStream = null;
+    }
+  }
+  // Liberar la cámara al salir/recargar la página, para que no quede "atorada" para el siguiente intento
+  window.addEventListener('pagehide', stopCamera);
+  window.addEventListener('beforeunload', stopCamera);
+
   function startCamera(){
     if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
       diag('Este navegador no expone cámara aquí — probar en el celular.');
       return;
     }
+    stopCamera(); // por si quedó algo abierto de un intento anterior en esta misma pestaña
     diag('Pidiendo permiso de cámara...');
     navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment', width:{ideal:1920}, height:{ideal:1080} }, audio:true })
       .then(stream=>{
@@ -536,18 +548,24 @@
           diag('reproduciendo: ' + video.videoWidth + 'x' + video.videoHeight);
         });
 
-        // Si en 3 segundos seguimos sin dimensiones reales, avisamos con datos concretos
         setTimeout(()=>{
-          if(video.videoWidth === 0){
-            diag('Sin frames tras 3s. readyState video=' + video.readyState + ', track=' + track.readyState + ', muted=' + video.muted + ', paused=' + video.paused);
+          if(video.videoWidth <= 2){
+            diag('Sin frames reales tras 3s (' + video.videoWidth + 'x' + video.videoHeight + '). Toca "Reintentar cámara" abajo.');
+            document.getElementById('retryCamBtn').style.display = 'block';
           }
         }, 3000);
       })
       .catch(err=>{
         diag('Sin acceso a cámara: ' + err.name + ' — ' + err.message);
+        document.getElementById('retryCamBtn').style.display = 'block';
       });
   }
   startCamera();
+
+  document.getElementById('retryCamBtn').addEventListener('click', ()=>{
+    document.getElementById('retryCamBtn').style.display = 'none';
+    startCamera();
+  });
 
   // ---------- Grabación real (cámara + audio directos, SIN canvas, para evitar el bug de Android) ----------
   let recording = false;
