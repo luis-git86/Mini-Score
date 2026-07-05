@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prueba mínima de cámara</title>
+<style>
+  body{margin:0;background:#000;color:#fff;font-family:sans-serif;}
+  #status{padding:12px;font-size:16px;background:#111;white-space:pre-wrap;}
+  video{width:100%;background:#222;}
+  button{font-size:18px;padding:14px;width:100%;}
+</style>
+</head>
+<body>
+  <button id="startBack" style="background:#2c2c34;color:#fff;">PROBAR CÁMARA TRASERA</button>
+  <button id="startFront" style="background:#444;color:#fff;">PROBAR CÁMARA FRONTAL</button>
+  <div id="status">Esperando...</div>
+  <video id="v" autoplay playsinline muted></video>
+
+<script>
+  const statusEl = document.getElementById('status');
+  const video = document.getElementById('v');
+  function log(msg){ statusEl.textContent += '\n' + msg; console.log(msg); }
+
+  async function testCamera(facing){
+    statusEl.textContent = 'Pidiendo cámara (' + facing + ')...';
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: facing } }, audio: true });
+      log('Permiso concedido.');
+      const track = stream.getVideoTracks()[0];
+      log('Track: ' + track.label);
+      log('Settings: ' + JSON.stringify(track.getSettings()));
+      video.srcObject = stream;
+      video.addEventListener('loadedmetadata', () => {
+        log('Dimensiones reales: ' + video.videoWidth + 'x' + video.videoHeight);
+      });
+    }catch(err){
+      log('ERROR: ' + err.name + ' - ' + err.message);
+    }
+  }
+
+  document.getElementById('startBack').addEventListener('click', () => testCamera('environment'));
+  document.getElementById('startFront').addEventListener('click', () => testCamera('user'));
+</script>
+</body>
+</html>
