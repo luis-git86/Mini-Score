@@ -26,16 +26,21 @@
   let currentStream = null;
 
   async function init(){
-    // Pedimos acceso genérico primero para que el navegador nos deje ver las etiquetas reales de cada cámara
     try{
-      const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
-      tmp.getTracks().forEach(t=>t.stop());
+      // Mantenemos el stream ABIERTO mientras enumeramos (no lo cerramos antes de tiempo)
+      currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
     }catch(e){
-      listEl.textContent = 'No se pudo obtener permiso inicial: ' + e.message;
+      listEl.textContent = 'No se pudo obtener permiso inicial: ' + e.name + ' - ' + e.message;
       return;
     }
 
+    // Pequeña espera para darle tiempo al navegador a "asentar" el permiso antes de listar
+    await new Promise(r => setTimeout(r, 300));
+
     const devices = await navigator.mediaDevices.enumerateDevices();
+    statusEl.textContent = 'TODOS los dispositivos detectados (' + devices.length + '):\n' +
+      devices.map(d => '- kind=' + d.kind + ' | label="' + d.label + '" | id=' + d.deviceId.slice(0,15)).join('\n');
+
     const cams = devices.filter(d => d.kind === 'videoinput');
     listEl.innerHTML = '';
     cams.forEach((cam, i) => {
@@ -47,7 +52,7 @@
       listEl.appendChild(btn);
     });
     if(cams.length === 0){
-      listEl.textContent = 'No se encontraron cámaras.';
+      listEl.textContent = 'Sin cámaras en la lista filtrada (ver detalle completo abajo).';
     }
   }
 
